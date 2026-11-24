@@ -205,6 +205,9 @@ th, td { text-align: left; padding: 10px 8px; border-bottom: 2.5px dashed color-
 th { font-size: 13px; color: var(--mut); }
 footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 32px; font-weight: 700; color: var(--mut); }
 
+.foot-actions { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.foot-actions .linkbtn { font-size: 14px; color: var(--mut); }
+
 /* toast & confetti */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%); background: var(--yellow); color: var(--dark); border: 3px solid var(--dark); box-shadow: 4px 4px 0 var(--dark); padding: 10px 20px; border-radius: 16px; font: 600 17px Fredoka, sans-serif; z-index: 60; transition: transform .3s cubic-bezier(.3, 1.6, .5, 1); pointer-events: none; }
 .toast.on { transform: translate(-50%, 0); }
