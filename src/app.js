@@ -292,10 +292,11 @@ async function run(withAI) {
   const timer = setInterval(() => { li = (li + 1) % lines.length; $('bubble').textContent = lines[li]; }, 1700);
   try {
     const j = await summarize({
-      key, preferredModel: CFG.GEMINI_MODEL, text,
+      key, usingBuiltInKey: !userKey, preferredModel: CFG.GEMINI_MODEL, text,
       length: document.querySelector('input[name=len]:checked').value,
       language: $('lang').value,
       onModel: m => { const el = $('loadMsg'); if (el) el.textContent = `Gemini (${m}) is reading…`; },
+      onWait: (s, m) => { const el = $('loadMsg'); if (el) el.textContent = `Gemini is busy, trying again in ${s} seconds…`; $('bubble').textContent = 'Gemini is busy. Hang on a sec…'; },
     });
     clearInterval(timer);
     renderAI(j);

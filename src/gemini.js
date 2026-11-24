@@ -3,10 +3,13 @@
 const API = 'https://generativelanguage.googleapis.com/v1beta';
 
 // Preferred models, best first. The app checks which ones your key can use,
-// and falls back to the next one if a model is busy or out of free quota.
-const PREFERRED = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'];
+// and falls back to the next one if a model is busy, out of free quota or retired.
+// Gemini 2.x models are left out on purpose: Google has closed them to new keys.
+const PREFERRED = ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
-let modelCache = null;
+const modelCache = new Map(); // one list per API key
+
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function call(path, key, init = {}) {
   const r = await fetch(API + path, { ...init, headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key, ...(init.headers || {}) } });
@@ -14,15 +17,29 @@ async function call(path, key, init = {}) {
   if (!r.ok) {
     const err = new Error((data.error && data.error.message) || 'Gemini returned error ' + r.status);
     err.status = r.status;
+    err.details = (data.error && data.error.details) || [];
     throw err;
   }
   return data;
 }
 
+// How long Gemini asks us to wait after a 429, in seconds (0 if it doesn't say).
+function retryDelay(e) {
+  const info = (e.details || []).find(d => String(d['@type'] || '').endsWith('RetryInfo'));
+  const m = info && String(info.retryDelay || '').match(/([\d.]+)s/);
+  return m ? Math.ceil(parseFloat(m[1])) : 0;
+}
+
+const isQuota = e => e && e.status === 429;
+// Errors that mean "this model can't be used, try another one".
+const isModelProblem = e => e && (e.status === 404 || e.status === 500 || e.status === 503 ||
+  /no longer available|not found|not supported|deprecated|is not available|unsupported model/i.test(e.message || ''));
+
 // Ask Gemini which models this key can use, then order them by preference.
 export async function pickModels(key, preferred) {
-  if (modelCache) return modelCache;
+  if (modelCache.has(key)) return modelCache.get(key);
   const wanted = [...new Set([preferred, ...PREFERRED].filter(Boolean))];
+  let list = wanted;
   try {
     const data = await call('/models?pageSize=200', key);
     const available = new Set((data.models || [])
@@ -30,22 +47,27 @@ export async function pickModels(key, preferred) {
       .map(m => m.name.replace(/^models\//, '')));
     const ordered = wanted.filter(m => available.has(m));
     if (!ordered.length) {
-      // None of our favourites exist anymore: take any Flash model the key offers.
-      ordered.push(...[...available].filter(m => /flash/.test(m) && !/(image|tts|live|audio|transcribe|omni)/.test(m)).sort().reverse());
+      // None of our favourites exist anymore: take the newest Flash models the key offers.
+      ordered.push(...[...available]
+        .filter(m => /^gemini-[3-9].*flash/.test(m) && !/(image|tts|live|audio|transcribe|omni|preview)/.test(m))
+        .sort((a, b) => b.localeCompare(a, undefined, { numeric: true })));
     }
-    modelCache = ordered.length ? ordered : wanted;
+    if (ordered.length) list = ordered;
   } catch (e) {
     if (e.status === 400 || e.status === 401 || e.status === 403) throw friendly(e);
-    modelCache = wanted;
   }
-  return modelCache;
+  modelCache.set(key, list);
+  return list;
 }
 
-function friendly(e) {
+function friendly(e, usingBuiltInKey) {
   const m = e.message || '';
   if (/API key not valid|API_KEY_INVALID/i.test(m)) return new Error('That Gemini API key is not valid. Check it in Google AI Studio.');
-  if (/referer|referrer/i.test(m)) return new Error('This API key is restricted to other websites. Add this site to the key\'s allowed websites in Google Cloud.');
-  if (e.status === 429) return new Error('Gemini\'s free quota is used up for now. Wait a minute (or until tomorrow) and try again.');
+  if (/referer|referrer/i.test(m)) return new Error('This API key is blocked for this website. Add this site to the key\'s allowed websites in Google Cloud.');
+  if (isQuota(e)) return new Error(usingBuiltInKey
+    ? 'Gemini\'s free quota for this site is used up right now (everyone using TextLens shares it). Wait a minute and try again, or tap “API key” at the top and paste your own free key from aistudio.google.com.'
+    : 'The free quota for your Gemini key is used up right now. Wait a minute (or until tomorrow) and try again.');
+  if (isModelProblem(e)) return new Error('None of the Gemini models TextLens uses are available for this key right now. Try again later, or paste a different key under “API key”.');
   return e;
 }
 
@@ -71,32 +93,45 @@ ${body}
 </doc>`;
 }
 
-export async function summarize({ key, preferredModel, text, length, language, onModel }) {
+export async function summarize({ key, usingBuiltInKey, preferredModel, text, length, language, onModel, onWait }) {
   const models = await pickModels(key, preferredModel);
-  let lastErr;
+  let quotaErr = null, lastErr = null;
   for (const model of models) {
-    try {
-      onModel && onModel(model);
-      const data = await call(`/models/${encodeURIComponent(model)}:generateContent`, key, {
-        method: 'POST',
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: buildPrompt(text, length, language) }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.4 },
-        }),
-      });
-      const cand = (data.candidates || [])[0];
-      if (!cand) throw new Error((data.promptFeedback && data.promptFeedback.blockReason) ? 'Gemini blocked this text (' + data.promptFeedback.blockReason + ').' : 'Gemini sent an empty reply.');
-      const out = (cand.content && cand.content.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
-      const m = out.match(/\{[\s\S]*\}/);
-      if (!m) throw new Error('Gemini\'s reply could not be read.');
-      const j = JSON.parse(m[0]);
-      j.model = model;
-      return j;
-    } catch (e) {
-      lastErr = e;
-      // Busy, out of quota or model missing: try the next model. Anything else: stop.
-      if (!(e.status === 429 || e.status === 404 || e.status === 503 || e.status === 500)) throw friendly(e);
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        onModel && onModel(model);
+        const data = await call(`/models/${encodeURIComponent(model)}:generateContent`, key, {
+          method: 'POST',
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: buildPrompt(text, length, language) }] }],
+            generationConfig: { responseMimeType: 'application/json', temperature: 0.4 },
+          }),
+        });
+        const cand = (data.candidates || [])[0];
+        if (!cand) throw new Error((data.promptFeedback && data.promptFeedback.blockReason) ? 'Gemini blocked this text (' + data.promptFeedback.blockReason + ').' : 'Gemini sent an empty reply.');
+        const out = (cand.content && cand.content.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+        const m = out.match(/\{[\s\S]*\}/);
+        if (!m) throw new Error('Gemini\'s reply could not be read.');
+        const j = JSON.parse(m[0]);
+        j.model = model;
+        return j;
+      } catch (e) {
+        if (isQuota(e)) {
+          quotaErr = e;
+          // A short wait often clears a per-minute limit: wait once, then retry the same model.
+          const wait = retryDelay(e);
+          if (attempt === 0 && wait > 0 && wait <= 20) {
+            onWait && onWait(wait, model);
+            await sleep(wait * 1000);
+            continue;
+          }
+          break; // try the next model
+        }
+        if (isModelProblem(e)) { lastErr = e; break; } // model retired or busy: next model
+        throw friendly(e, usingBuiltInKey); // bad key, blocked text, etc.: stop here
+      }
     }
   }
-  throw friendly(lastErr || new Error('No Gemini model was available.'));
+  // Report the most useful reason: running out of quota beats "model unavailable".
+  throw friendly(quotaErr || lastErr || new Error('No Gemini model was available.'), usingBuiltInKey);
 }
