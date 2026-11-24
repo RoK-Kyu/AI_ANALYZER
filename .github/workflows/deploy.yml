@@ -24,10 +24,14 @@ jobs:
         with:
           node-version: 20
 
-      - name: Build site (puts the Gemini key from the repository secret into config.js)
+      - name: Build site (puts the Gemini keys from the repository secrets into config.js)
         run: node build.mjs
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
+          GEMINI_API_KEY_4: ${{ secrets.GEMINI_API_KEY_4 }}
+          GEMINI_API_KEY_5: ${{ secrets.GEMINI_API_KEY_5 }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.8-flash' }}
 
       - uses: actions/configure-pages@v5
