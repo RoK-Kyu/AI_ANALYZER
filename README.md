@@ -69,6 +69,15 @@ git push -u origin main
 
 Every push to `main` rebuilds and republishes the site.
 
+## Backup keys (optional)
+
+You can give TextLens up to 5 Gemini keys. It uses the main key first. If that key is out of quota, invalid or blocked, it automatically switches to the next one, so visitors don't notice.
+
+- **On your computer:** in `.env`, fill in `GEMINI_API_KEY` (main) and, if you have them, `GEMINI_API_KEY_2` and `GEMINI_API_KEY_3`.
+- **On GitHub:** add repository secrets named `GEMINI_API_KEY_2`, `GEMINI_API_KEY_3`, `GEMINI_API_KEY_4` and `GEMINI_API_KEY_5` (only the ones you have). The workflow already reads them.
+- **Important:** create each key in a **different Google Cloud project** (in AI Studio, choose **Create API key → Create API key in new project**). Gemini's free limits are counted per project, so two keys from the same project share one quota and won't help.
+- Restrict every key to your site's address (see below), because all of them are built into the published site.
+
 ## ⚠️ About your key on a public website
 
 GitHub Pages only hosts files, so the key the site uses ends up inside `config.js` in the published site, where anyone who knows how can find it. The secret only keeps the key out of your **code**. To stop other people from using your key on other websites:
@@ -85,7 +94,9 @@ Don't add a payment method to that Google project. Then the key stays on the fre
 
 ## AI model
 
-The app uses Google Gemini through the [Gemini API](https://ai.google.dev/gemini-api/docs). TextLens uses **Gemini 3.8 Flash** (`gemini-3.8-flash`), set by `GEMINI_MODEL` in `.env`. The app asks Google which models your key can use. If Gemini 3.8 Flash is unavailable, busy or out of free quota, it falls back in order to `gemini-3.7-flash`, `gemini-3.5-flash`, `gemini-2.5-flash`, then the Flash-Lite models. On GitHub, the workflow also uses Gemini 3.8 Flash first. To choose a different model there, add a repository **variable** (not a secret) named `GEMINI_MODEL`.
+The app uses Google Gemini through the [Gemini API](https://ai.google.dev/gemini-api/docs). TextLens uses **Gemini 3.8 Flash** (`gemini-3.8-flash`), set by `GEMINI_MODEL` in `.env`. The app asks Google which models your key can use. If Gemini 3.8 Flash is unavailable, busy or out of free quota, it waits and retries once if Gemini asks it to, then falls back in order to `gemini-3.7-flash`, `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite` and `gemini-3.1-flash-lite`. Gemini 2.x models are left out because Google has closed them to new keys.
+
+**Shared quota:** the key built into the site is shared by everyone who uses it, so the free tier's per-minute and per-day limits are shared too. Visitors never need their own key. If someone wants to, a small optional link at the bottom of the page ("Use my own Gemini key") lets them paste one, which then stays in their browser. On GitHub, the workflow also uses Gemini 3.8 Flash first. To choose a different model there, add a repository **variable** (not a secret) named `GEMINI_MODEL`.
 
 ## Tools used
 
