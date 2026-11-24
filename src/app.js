@@ -84,16 +84,27 @@ function confetti() {
 }
 
 /* ---------- API key handling ---------- */
-const BUILT_KEY = String(CFG.GEMINI_API_KEY || '').trim();
+// One or more built-in keys (main key first, then backups), from .env or GitHub secrets.
+const BUILT_KEYS = [...new Set([...(Array.isArray(CFG.GEMINI_API_KEYS) ? CFG.GEMINI_API_KEYS : []), CFG.GEMINI_API_KEY]
+  .map(k => String(k || '').trim()).filter(Boolean))];
+const BUILT_KEY = BUILT_KEYS[0] || '';
 let userKey = store.get('tl_gemini_key') || '';
 const getKey = () => userKey || BUILT_KEY;
+// A pasted key is used on its own; otherwise all built-in keys take turns.
+const getKeys = () => userKey ? [userKey] : BUILT_KEYS;
 function keyUI() {
   const ok = !!getKey();
   $('keyDot').classList.toggle('ok', ok);
-  $('keyLabel').textContent = userKey ? 'Your key' : BUILT_KEY ? 'Key ready' : 'Add API key';
+  $('keyLabel').textContent = userKey ? 'Your key' : 'Add API key';
+  // With a built-in key, visitors never need their own: hide the top button and
+  // keep only a small optional link in the footer. Show the button again only if
+  // someone has chosen to paste their own key (so they can see and remove it).
+  $('keyBtn').classList.toggle('hide', !!BUILT_KEY && !userKey);
+  $('ownKeyLink').classList.toggle('hide', !BUILT_KEY);
+  $('keyTitle').textContent = BUILT_KEY ? 'Your own Gemini key (optional)' : 'Gemini API key';
   $('keyStatus').textContent = BUILT_KEY
-    ? 'This site has a Gemini key built in (from your .env file or GitHub secret). You can paste a different key here to use that one instead.'
-    : 'No key is built into this site yet. Paste your Gemini API key to switch on the AI summary.';
+    ? 'You don\'t need a key: TextLens already has one and works as it is. This is only for people who would rather use their own free Gemini key.'
+    : 'No key is built into this site yet. Paste a Gemini API key to switch on the AI summary.';
   $('remember').checked = !!store.get('tl_gemini_key');
 }
 function togglePanel(open) {
@@ -103,6 +114,7 @@ function togglePanel(open) {
   if (show) $('keyInput').focus();
 }
 $('keyBtn').onclick = () => togglePanel();
+$('ownKeyLink').onclick = () => { togglePanel(true); $('keyPanel').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }); };
 $('keySave').onclick = () => {
   const v = $('keyInput').value.trim();
   if (!v) { toast('Paste a key first'); return; }
@@ -113,7 +125,7 @@ $('keySave').onclick = () => {
   mood('happy', 'Key received! Now hit “Analyze it!”');
 };
 $('remember').onchange = () => { if (userKey) store.set('tl_gemini_key', $('remember').checked ? userKey : null); };
-$('keyForget').onclick = () => { userKey = ''; store.set('tl_gemini_key', null); keyUI(); toast('Pasted key forgotten'); };
+$('keyForget').onclick = () => { userKey = ''; store.set('tl_gemini_key', null); keyUI(); if (BUILT_KEY) togglePanel(false); toast(BUILT_KEY ? 'Back to the built-in key' : 'Pasted key forgotten'); };
 keyUI();
 
 /* ---------- input: tabs, file, sample ---------- */
@@ -263,7 +275,7 @@ function renderAI(j) {
   $('topics').innerHTML = topics.map((t, i) => `<span style="background:${tc[i % tc.length]};transform:rotate(${i % 2 ? 2 : -2}deg)">${esc(t)}</span>`).join('');
   $('topicsWrap').classList.toggle('hide', !topics.length);
   $('modelTag').textContent = j.model || 'Gemini';
-  $('modelNote').textContent = j.model ? `Model used for the last summary: ${j.model}.` : '';
+  $('modelNote').textContent = j.model ? `Model used for the last summary: ${j.model}${j.keyCount > 1 ? ` (key ${j.keyNumber} of ${j.keyCount})` : ''}.` : '';
 }
 
 /* ---------- main flow ---------- */
@@ -274,7 +286,8 @@ async function run(withAI) {
   renderLocal(a);
   if (!withAI) return;
   if (!a.words) { mood('sad', 'My plate is empty! Type or upload something.'); return; }
-  const key = getKey();
+  const keys = getKeys();
+  const key = keys[0];
   if (!key) {
     togglePanel(true);
     mood('sad', 'I need a Gemini API key first. Paste it up top!');
@@ -292,11 +305,11 @@ async function run(withAI) {
   const timer = setInterval(() => { li = (li + 1) % lines.length; $('bubble').textContent = lines[li]; }, 1700);
   try {
     const j = await summarize({
-      key, usingBuiltInKey: !userKey, preferredModel: CFG.GEMINI_MODEL, text,
+      keys, usingBuiltInKey: !userKey, preferredModel: CFG.GEMINI_MODEL, text,
       length: document.querySelector('input[name=len]:checked').value,
       language: $('lang').value,
-      onModel: m => { const el = $('loadMsg'); if (el) el.textContent = `Gemini (${m}) is reading…`; },
-      onWait: (s, m) => { const el = $('loadMsg'); if (el) el.textContent = `Gemini is busy, trying again in ${s} seconds…`; $('bubble').textContent = 'Gemini is busy. Hang on a sec…'; },
+      onModel: (m, n, total) => { const el = $('loadMsg'); if (el) el.textContent = total > 1 && n > 1 ? `Gemini (${m}, backup key ${n - 1}) is reading…` : `Gemini (${m}) is reading…`; },
+      onWait: s => { const el = $('loadMsg'); if (el) el.textContent = `Gemini is busy, trying again in ${s} seconds…`; $('bubble').textContent = 'Gemini is busy. Hang on a sec…'; },
     });
     clearInterval(timer);
     renderAI(j);
