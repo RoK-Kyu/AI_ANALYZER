@@ -26,7 +26,7 @@
 
 <main class="wrap">
   <section class="card keypanel hide" id="keyPanel" aria-label="Gemini API key">
-    <h2>Gemini API key</h2>
+    <h2 id="keyTitle">Gemini API key</h2>
     <p id="keyStatus"></p>
     <div class="keyrow">
       <input type="password" id="keyInput" placeholder="Paste a key that starts with AIza…" autocomplete="off" spellcheck="false" aria-label="Gemini API key">
@@ -156,7 +156,10 @@
 
   <footer>
     <span>TextLens · Gemini by Google · PDF.js by Mozilla</span>
-    <button class="btn small" id="copy">Copy results</button>
+    <span class="foot-actions">
+      <button class="linkbtn hide" id="ownKeyLink">Use my own Gemini key (optional)</button>
+      <button class="btn small" id="copy">Copy results</button>
+    </span>
   </footer>
 </main>
 <div class="toast" id="toast" role="status"></div>
