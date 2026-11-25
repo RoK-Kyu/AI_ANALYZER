@@ -6,7 +6,7 @@ import { summarize } from './gemini.js';
 let CFG = {};
 try { CFG = (await import('../config.js')).default || {}; } catch (e) { /* no built-in key */ }
 
-const VERSION = '2.4';
+const VERSION = '2.7';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -267,31 +267,34 @@ const clip = (t, n) => t.length > n ? t.slice(0, n - 1) + '…' : t;
 function renderUnder(text, a) {
   const b = bagOfWords(text, a);
   last.bow = b;
-  $('tokStats').innerHTML = [
-    [fmt(b.total), 'total tokens'], [fmt(b.vocab), 'vocabulary (unique)'],
-    [fmt(b.removed), 'stopwords & numbers removed'], [Math.round(a.diversity * 100) + '%', 'type-token ratio'],
-  ].map(([v, l]) => `<div><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
+  const fun = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
+  const tokTiles = [[fmt(b.total), 'Total tokens', 'var(--lilac)'], [fmt(b.vocab), 'Vocabulary (unique)', 'var(--orange)'],
+    [fmt(b.removed), 'Stopwords & numbers removed', 'var(--pink)'], [Math.round(a.diversity * 100) + '%', 'Type-token ratio', 'var(--mint)']];
+  const tokTilt = [1.4, -1.2, 1, -1.5];
+  $('tokStats').innerHTML = tokTiles.map(([v, l, bg], i) =>
+    `<div class="tile" style="background:${bg};transform:rotate(${tokTilt[i]}deg)">${DOODLES[(i + 2) % DOODLES.length]}<div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
   $('toks').innerHTML = b.preview.length
     ? b.preview.map(x => `<span class="tok${x.keep ? '' : ' out'}">${esc(x.t)}</span>`).join('') + (b.total > b.preview.length ? `<span class="tok out" style="text-decoration:none">+${fmt(b.total - b.preview.length)} more</span>` : '')
     : '<p class="empty">No tokens yet.</p>';
 
+  // TF and TF-IDF as colourful leaderboards, with the maths under each word
+  const maxTf = b.byTf.length ? b.byTf[0].tf : 1;
   $('tfTable').innerHTML = b.byTf.length
-    ? `<thead><tr><th>Word</th><th>Count</th><th class="opt">Count ÷ total</th><th>TF</th></tr></thead><tbody>${b.byTf.map((r, i) =>
-      `<tr><td><span class="rank">${i + 1}</span>${esc(r.w)}</td><td>${r.c}</td><td class="calc opt">${r.c} ÷ ${fmt(b.total)}</td><td class="hi">${n3(r.tf)}</td></tr>`).join('')}</tbody>`
-    : '<tbody><tr><td class="empty">No words yet.</td></tr></tbody>';
+    ? b.byTf.map((r, i) => `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(r.w)}">${esc(r.w)}<small>${r.c} ÷ ${fmt(b.total)}</small></span><span class="t"><i style="width:${(r.tf / maxTf * 100).toFixed(1)}%;background:${fun[i % fun.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${n3(r.tf)}</span></li>`).join('')
+    : '<li class="empty">No words yet.</li>';
 
+  const maxTi = b.byTfidf.length && b.byTfidf[0].tfidf > 0 ? b.byTfidf[0].tfidf : 1;
   $('tfidfTable').innerHTML = b.byTfidf.length
-    ? `<thead><tr><th>Word</th><th class="opt">TF</th><th>DF</th><th>IDF</th><th>TF-IDF</th></tr></thead><tbody>${b.byTfidf.map((r, i) =>
-      `<tr><td><span class="rank">${i + 1}</span>${esc(r.w)}</td><td class="opt">${n3(r.tf)}</td><td>${r.df} / ${b.N}</td><td>${n3(r.idf)}</td><td class="hi">${n4(r.tfidf)}</td></tr>`).join('')}</tbody>`
-    : '<tbody><tr><td class="empty">No words yet.</td></tr></tbody>';
+    ? b.byTfidf.map((r, i) => `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(r.w)}">${esc(r.w)}<small>DF ${r.df}/${b.N} · IDF ${n3(r.idf)}</small></span><span class="t"><i style="width:${(r.tfidf / maxTi * 100).toFixed(1)}%;background:${fun[(i + 3) % fun.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${n4(r.tfidf)}</span></li>`).join('')
+    : '<li class="empty">No words yet.</li>';
   $('tfidfNote').textContent = b.N < 2
     ? 'TF-IDF needs at least 2 sentences: with only one, every word is in every "document", so IDF is 0.'
     : `N = ${b.N} sentences. DF = how many sentences contain the word. A word in every sentence gets IDF 0; rarer words score higher, so TF-IDF favours words that are frequent but concentrated in a few sentences.`;
 
   const heat = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
   $('matrix').innerHTML = b.matrix.length && b.cols.length
-    ? `<thead><tr><th>Sentence</th>${b.cols.map(w => `<th>${esc(w)}</th>`).join('')}</tr></thead><tbody>${b.matrix.map(r =>
-      `<tr><td class="sent" title="${esc(r.s)}"><b>S${r.i + 1}</b>${esc(clip(r.s, 34))}</td>${r.counts.map((c, k) =>
+    ? `<thead><tr><th>Sentence</th>${b.cols.map((w, k) => `<th><span class="mtag" style="background:${heat[k % heat.length]};transform:rotate(${k % 2 ? 3 : -3}deg)">${esc(w)}</span></th>`).join('')}</tr></thead><tbody>${b.matrix.map(r =>
+      `<tr><td class="sent" title="${esc(r.s)}"><span class="sbadge">S${r.i + 1}</span>${esc(clip(r.s, 30))}</td>${r.counts.map((c, k) =>
         `<td><span class="cell${c ? ' on' : ''}" style="${c ? `background:${heat[k % heat.length]}` : ''}">${c}</span></td>`).join('')}</tr>`).join('')}</tbody>`
       + (b.N > b.matrix.length ? `<tfoot><tr><td class="sent" colspan="${b.cols.length + 1}">Showing the first ${b.matrix.length} of ${b.N} sentences</td></tr></tfoot>` : '')
     : '<tbody><tr><td class="empty">No words yet.</td></tr></tbody>';

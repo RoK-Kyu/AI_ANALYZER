@@ -251,11 +251,26 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   .tokstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-h .formula { font-size: 12px; }
   .nt .opt, .nt .rank { display: none; }
+  .board.math li { grid-template-columns: 30px minmax(0, 7em) minmax(0, 1fr) 3.8em; }
+  .mini-tiles .tile .l { font-size: 13px; }
   .nt th, .nt td { padding: 8px 5px; }
   .matrix td.sent { max-width: 110px; }
   .matrix th:nth-child(n+6), .matrix td:nth-child(n+6) { display: none; }
   .cell { min-width: 28px; }
 }
+
+/* fun versions for the under-the-hood cards */
+.mini-tiles { margin: 6px 0 18px; gap: 16px; }
+.mini-tiles .tile { padding: 14px 16px; box-shadow: 4px 4px 0 var(--line); }
+.mini-tiles .tile .v { font-size: clamp(28px, 3.4vw, 38px); }
+.mini-tiles .tile .l { font-size: 14px; }
+.mini-tiles .tile svg { width: 58px; height: 58px; }
+.board.math li { grid-template-columns: 34px minmax(0, 8.5em) minmax(0, 1fr) 4.2em; }
+.board.math .w small { display: block; font-size: 12px; font-weight: 700; color: var(--mut); line-height: 1.2; }
+.board.math .c { font-variant-numeric: tabular-nums; }
+.mtag { display: inline-block; font: 600 13px Fredoka, sans-serif; padding: 3px 9px; border-radius: 10px; border: 2px solid var(--dark); color: var(--dark); white-space: nowrap; }
+.sbadge { display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; margin-right: 8px; border-radius: 99px; border: 2px solid var(--dark); background: var(--yellow); color: var(--dark); font: 600 13px Fredoka, sans-serif; vertical-align: middle; }
+.matrix td.sent { white-space: nowrap; }
 
 /* toast & confetti */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%); background: var(--yellow); color: var(--dark); border: 3px solid var(--dark); box-shadow: 4px 4px 0 var(--dark); padding: 10px 20px; border-radius: 16px; font: 600 17px Fredoka, sans-serif; z-index: 60; transition: transform .3s cubic-bezier(.3, 1.6, .5, 1), opacity .2s, visibility .2s; pointer-events: none; opacity: 0; visibility: hidden; }
