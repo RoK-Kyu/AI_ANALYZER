@@ -6,7 +6,7 @@ import { summarize } from './gemini.js';
 let CFG = {};
 try { CFG = (await import('../config.js')).default || {}; } catch (e) { /* no built-in key */ }
 
-const VERSION = '2.7';
+const VERSION = '2.8';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -187,8 +187,11 @@ const DOODLES = [
   '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="7" fill="#18181B"/><path d="M20 2v8M20 30v8M2 20h8M30 20h8M7 7l6 6M27 27l6 6M33 7l-6 6M13 27l-6 6" stroke="#18181B" stroke-width="4" stroke-linecap="round"/></svg>',
   '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#18181B" stroke-width="5"/><path d="M20 10v11l7 5" stroke="#18181B" stroke-width="5" fill="none" stroke-linecap="round"/></svg>',
 ];
-const TILE_COLORS = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)'];
-const TILT = [-1.6, 1.2, -1, 1.6];
+const TILE_COLORS = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
+const TILT = [-1.6, 1.2, -1, 1.6, -1.3, 1.1];
+DOODLES.push(
+  '<svg viewBox="0 0 40 40"><path d="M8 8l24 24M32 8L8 32" stroke="#18181B" stroke-width="6" stroke-linecap="round"/></svg>',
+  '<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="none" stroke="#18181B" stroke-width="5"/><path d="M20 20V4a16 16 0 0 1 15 21z" fill="#18181B"/></svg>');
 const CLOUD_COLORS = ['var(--c1)', 'var(--c2)', 'var(--c3)', 'var(--c4)', 'var(--c5)', 'var(--ink)'];
 const hash = s => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
 
@@ -221,7 +224,10 @@ function face(sentiment) {
 function renderLocal(a) {
   $('live').textContent = `${fmt(a.words)} words · ${fmt(a.chars)} characters`;
 
-  const tiles = [['Words', fmt(a.words)], ['Unique words', fmt(a.unique)], ['Sentences', fmt(a.sents)], ['Reading time', mins(a.readMin)]];
+  // One row of tiles: the word counts and the bag-of-words numbers together.
+  const kept = [...a.freq.values()].reduce((s, c) => s + c, 0);
+  const tiles = [['Words (tokens)', fmt(a.words)], ['Unique words (vocabulary)', fmt(a.unique)], ['Sentences', fmt(a.sents)],
+    ['Reading time', mins(a.readMin)], ['Stopwords removed', fmt(a.words - kept)], ['Type-token ratio', Math.round(a.diversity * 100) + '%']];
   $('tiles').innerHTML = tiles.map(([l, v], i) =>
     `<div class="tile" style="background:${TILE_COLORS[i]};transform:rotate(${TILT[i]}deg)">${DOODLES[i]}<div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
 
@@ -250,7 +256,7 @@ function renderLocal(a) {
     `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(w)}">${esc(w)}</span><span class="t"><i style="width:${(c / top * 100).toFixed(1)}%;background:${barCols[i % barCols.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${c}</span></li>`).join('')
     : '<li class="empty">No words yet.</li>';
 
-  const facts = [['Paragraphs', fmt(a.paras)], ['Characters', fmt(a.chars)], ['Without spaces', fmt(a.charsNoSp)], ['Avg. word length', a.avgWord.toFixed(1) + ' letters'], ['Avg. sentence', a.avgSent.toFixed(1) + ' words'], ['Speaking time', mins(a.speakMin)], ['Word variety', Math.round(a.diversity * 100) + '%'], ['Longest word', a.longest[0] || '–']];
+  const facts = [['Paragraphs', fmt(a.paras)], ['Characters', fmt(a.chars)], ['Without spaces', fmt(a.charsNoSp)], ['Avg. word length', a.avgWord.toFixed(1) + ' letters'], ['Avg. sentence', a.avgSent.toFixed(1) + ' words'], ['Speaking time', mins(a.speakMin)], ['Longest word', a.longest[0] || '–']];
   $('facts').innerHTML = facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
 
   $('pairs').innerHTML = a.bigrams.length ? a.bigrams.map(([p, c]) => `<span>${esc(p)}<em>×${c}</em></span>`).join('') : '<p class="empty">No pair shows up twice yet.</p>';
@@ -268,11 +274,6 @@ function renderUnder(text, a) {
   const b = bagOfWords(text, a);
   last.bow = b;
   const fun = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
-  const tokTiles = [[fmt(b.total), 'Total tokens', 'var(--lilac)'], [fmt(b.vocab), 'Vocabulary (unique)', 'var(--orange)'],
-    [fmt(b.removed), 'Stopwords & numbers removed', 'var(--pink)'], [Math.round(a.diversity * 100) + '%', 'Type-token ratio', 'var(--mint)']];
-  const tokTilt = [1.4, -1.2, 1, -1.5];
-  $('tokStats').innerHTML = tokTiles.map(([v, l, bg], i) =>
-    `<div class="tile" style="background:${bg};transform:rotate(${tokTilt[i]}deg)">${DOODLES[(i + 2) % DOODLES.length]}<div class="v">${esc(v)}</div><div class="l">${esc(l)}</div></div>`).join('');
   $('toks').innerHTML = b.preview.length
     ? b.preview.map(x => `<span class="tok${x.keep ? '' : ' out'}">${esc(x.t)}</span>`).join('') + (b.total > b.preview.length ? `<span class="tok out" style="text-decoration:none">+${fmt(b.total - b.preview.length)} more</span>` : '')
     : '<p class="empty">No tokens yet.</p>';
