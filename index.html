@@ -101,7 +101,8 @@
   <section class="tiles" id="tiles" aria-label="Main numbers"></section>
 
   <section class="card tokens-card" aria-label="Tokens">
-    <div class="card-h"><h2>Tokens</h2><span class="formula">bag of words</span></div>
+    <div class="card-h"><h2>Tokens</h2><span class="hdr-right"><label class="switch" title="Count different forms of a word as one"><input type="checkbox" id="stemToggle"><span class="track" aria-hidden="true"><span class="knob"></span></span>Stemming</label><span class="formula">bag of words</span></span></div>
+    <p class="stemnote" id="stemNote"></p>
     <div class="toks" id="toks"></div>
     <p class="note">The first tokens of your text: each word is one token, so the token count is the word count in the tiles above. Faded ones are stopwords or numbers, which are removed before counting. A bag of words keeps only which words appear and how often, not their order.</p>
   </section>
@@ -109,9 +110,19 @@
   <section class="grid">
     <article class="card summary-card span-8">
       <div class="card-h"><h2>The gist</h2><span class="pill" id="modelTag">Gemini</span></div>
-      <div class="mood" id="mood"></div>
-      <div class="sum" id="summary"><p class="empty">Hit <b>Analyze it!</b> and Gemini will write a summary here.</p></div>
-      <div id="topicsWrap" class="hide"><h3>Topics</h3><div class="topics" id="topics"></div></div>
+      <div class="gtabs" role="tablist" aria-label="Summary type">
+        <button role="tab" id="tabAI" aria-selected="true" aria-controls="paneAI">AI summary</button>
+        <button role="tab" id="tabQP" aria-selected="false" aria-controls="paneQP">Quick pick <small>no AI</small></button>
+      </div>
+      <div id="paneAI" role="tabpanel">
+        <div class="mood" id="mood"></div>
+        <div class="sum" id="summary"><p class="empty">Hit <b>Analyze it!</b> and Gemini will write a summary here.</p></div>
+        <div id="topicsWrap" class="hide"><h3>Topics</h3><div class="topics" id="topics"></div></div>
+      </div>
+      <div id="paneQP" role="tabpanel" class="hide">
+        <p class="sub">The most important original sentences, picked without AI (Luhn's word-frequency method). Compare it with the AI summary.</p>
+        <div class="sum" id="ext"></div>
+      </div>
     </article>
     <article class="card gauge-card span-4">
       <h2>How hard to read?</h2>
@@ -119,7 +130,7 @@
     </article>
 
     <article class="card cloud-card span-7">
-      <h2>Word cloud</h2>
+      <div class="card-h"><h2>Word cloud</h2><span class="hint">tap a word to spotlight it</span></div>
       <div class="cloud" id="cloud"></div>
     </article>
     <article class="card span-5">
@@ -128,26 +139,21 @@
       <p class="note">Common words like “the”, “and” and “of” are skipped.</p>
     </article>
 
-    <article class="card span-4">
+    <article class="card span-6">
       <h2>Nerd stats</h2>
       <dl class="facts" id="facts"></dl>
     </article>
-    <article class="card span-4">
+    <article class="card span-6">
       <h2>Word pairs</h2>
       <p class="sub">Two-word phrases used more than once</p>
       <div class="pairs" id="pairs"></div>
-    </article>
-    <article class="card span-4">
-      <h2>Quick pick</h2>
-      <p class="sub">The most important original sentences, picked without AI</p>
-      <div class="sum small" id="ext"></div>
     </article>
   </section>
 
   <section class="under" aria-labelledby="underTitle">
     <span class="sticker alt">No AI needed</span>
     <h2 class="section-title" id="underTitle">Under the hood: bag of words &amp; TF-IDF</h2>
-    <p class="section-sub">How a computer “sees” your text. Each sentence counts as a mini-document, so these work with a single text. None of this uses a Gemini request.</p>
+    <p class="section-sub">How a computer “sees” your text. Each sentence counts as a mini-document, so these work with a single text. None of this uses a Gemini request. Tap any word to spotlight it.</p>
   </section>
 
   <section class="grid">
@@ -179,6 +185,7 @@
         <tr><td>Word stats</td><td>Custom JavaScript</td><td>Counts, frequencies, word pairs, reading time</td></tr>
         <tr><td>Readability</td><td>Flesch Reading Ease and Flesch–Kincaid formulas</td><td>Scores how hard the text is to read</td></tr>
         <tr><td>Quick pick</td><td>Luhn-style sentence scoring</td><td>Non-AI summary made of original sentences</td></tr>
+        <tr><td>Stemming</td><td>Light suffix-stripping stemmer (custom JavaScript)</td><td>Counts different forms of a word (students, student) as one</td></tr>
         <tr><td>Bag of words &amp; TF-IDF</td><td>Custom JavaScript (TF, DF, IDF with log₁₀, TF-IDF)</td><td>Word importance, with each sentence as a mini-document</td></tr>
         <tr><td>Sentence similarity</td><td>Cosine similarity on bag-of-words vectors</td><td>Finds the sentences that use the most similar words</td></tr>
         <tr><td>Hosting</td><td>GitHub Pages + GitHub Actions</td><td>Builds and publishes the site</td></tr>
@@ -188,13 +195,22 @@
   </details>
 
   <footer>
-    <span>TextLens v3.1 · Gemini by Google · PDF.js by Mozilla</span>
+    <span>TextLens v3.2 · Gemini by Google · PDF.js by Mozilla</span>
     <span class="foot-actions">
       <button class="linkbtn hide" id="ownKeyLink">Use my own Gemini key (optional)</button>
       <button class="btn small" id="copy">Copy results</button>
     </span>
   </footer>
 </main>
+<aside class="spot hide" id="spot" aria-label="Word spotlight">
+  <div class="spot-h">
+    <span class="spot-word" id="spotWord"></span>
+    <span class="spot-sub" id="spotSub"></span>
+    <button class="spot-x" id="spotClose" aria-label="Close spotlight">✕</button>
+  </div>
+  <div class="spot-stats" id="spotStats"></div>
+  <div class="spot-body" id="spotBody"></div>
+</aside>
 <div class="toast" id="toast" role="status"></div>
 
 <script type="module" src="src/app.js"></script>

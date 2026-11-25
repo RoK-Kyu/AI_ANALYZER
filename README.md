@@ -7,7 +7,9 @@ TextLens is a playful AI text analyzer. Type or paste text, or upload a PDF, and
 - Frequent two-word phrases
 - A readability gauge (Flesch Reading Ease and Flesch–Kincaid grade)
 - An **AI summary from Google Gemini** with key points, sentiment, tone, language and topics
-- A non-AI "Quick pick" summary for comparison
+- A non-AI "Quick pick" summary, shown as a second tab next to the AI summary
+- **Stemming switch:** groups word forms (students + student, read + reading) before counting
+- **Word spotlight:** tap any word to see its count, TF, DF, IDF and TF-IDF and every sentence that contains it, highlighted
 - **Under the hood** (no AI requests): tokens and vocabulary, a bag-of-words matrix, term frequency (TF), TF-IDF keywords and the most similar sentences by cosine similarity. Each sentence is treated as a mini-document, so IDF works on a single text.
 
 ## Project files
