@@ -147,19 +147,19 @@
   <section class="grid">
     <article class="card span-12">
       <div class="card-h"><h2>Tokens &amp; vocabulary</h2><span class="formula">bag of words</span></div>
-      <div class="tokstats" id="tokStats"></div>
+      <div class="tiles mini-tiles" id="tokStats"></div>
       <div class="toks" id="toks"></div>
       <p class="note">The first tokens of your text. Faded ones are stopwords or numbers, which are removed before counting. A bag of words keeps only which words appear and how often, not their order.</p>
     </article>
 
     <article class="card span-6">
       <div class="card-h"><h2>Term frequency (TF)</h2><span class="formula">TF = count ÷ total words</span></div>
-      <div class="scroll"><table class="nt" id="tfTable"></table></div>
+      <ol class="board math" id="tfTable"></ol>
       <p class="note">How big a share of the whole text each word takes up.</p>
     </article>
     <article class="card span-6">
       <div class="card-h"><h2>TF-IDF keywords</h2><span class="formula">TF × log₁₀(N ÷ DF)</span></div>
-      <div class="scroll"><table class="nt" id="tfidfTable"></table></div>
+      <ol class="board math" id="tfidfTable"></ol>
       <p class="note" id="tfidfNote"></p>
     </article>
 
@@ -194,7 +194,7 @@
   </details>
 
   <footer>
-    <span>TextLens v2.4 · Gemini by Google · PDF.js by Mozilla</span>
+    <span>TextLens v2.7 · Gemini by Google · PDF.js by Mozilla</span>
     <span class="foot-actions">
       <button class="linkbtn hide" id="ownKeyLink">Use my own Gemini key (optional)</button>
       <button class="btn small" id="copy">Copy results</button>
