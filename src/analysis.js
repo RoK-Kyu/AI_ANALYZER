@@ -101,7 +101,7 @@ export function bagOfWords(text, a) {
 
   // Document-term matrix: first sentences x the most frequent words
   const cols = byTf.slice(0, 7).map(r => r.w);
-  const matrix = sentTokens.slice(0, 8).map((ts, i) => ({
+  const matrix = sentTokens.slice(0, 500).map((ts, i) => ({ // capped so huge PDFs stay fast
     i, s: a.sentList[i], counts: cols.map(w => ts.filter(t => t === w).length),
   }));
 

@@ -6,7 +6,7 @@ import { summarize } from './gemini.js';
 let CFG = {};
 try { CFG = (await import('../config.js')).default || {}; } catch (e) { /* no built-in key */ }
 
-const VERSION = '3.0';
+const VERSION = '3.1';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -288,6 +288,32 @@ $('toks').addEventListener('click', e => {
   if (!showAllTokens) $('toks').closest('.card').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
 });
 
+let showAllSentences = false;
+const MATRIX_PREVIEW = 8;
+function renderMatrix(b) {
+  const heat = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
+  if (!b.matrix.length || !b.cols.length) { $('matrix').innerHTML = '<tbody><tr><td class="empty">No words yet.</td></tr></tbody>'; return; }
+  const rows = showAllSentences ? b.matrix : b.matrix.slice(0, MATRIX_PREVIEW);
+  const span = b.cols.length + 1;
+  let foot = '';
+  if (b.N > MATRIX_PREVIEW) {
+    const label = showAllSentences ? 'Show fewer' : `Show all ${fmt(Math.min(b.N, b.matrix.length))} sentences`;
+    const info = showAllSentences
+      ? (b.N > b.matrix.length ? `Showing the first ${fmt(b.matrix.length)} of ${fmt(b.N)} sentences` : `Showing all ${fmt(b.N)} sentences`)
+      : `Showing the first ${MATRIX_PREVIEW} of ${fmt(b.N)} sentences`;
+    foot = `<tfoot><tr><td class="sent" colspan="${span}"><span class="mfoot">${info}<button class="tokbtn" id="sentToggle">${label}</button></span></td></tr></tfoot>`;
+  }
+  $('matrix').innerHTML = `<thead><tr><th>Sentence</th>${b.cols.map((w, k) => `<th><span class="mtag" style="background:${heat[k % heat.length]};transform:rotate(${k % 2 ? 3 : -3}deg)">${esc(w)}</span></th>`).join('')}</tr></thead><tbody>${rows.map(r =>
+    `<tr><td class="sent" title="${esc(r.s)}"><span class="sbadge">S${r.i + 1}</span>${esc(clip(r.s, 30))}</td>${r.counts.map((c, k) =>
+      `<td><span class="cell${c ? ' on' : ''}" style="${c ? `background:${heat[k % heat.length]}` : ''}">${c}</span></td>`).join('')}</tr>`).join('')}</tbody>${foot}`;
+}
+$('matrix').addEventListener('click', e => {
+  if (!e.target.closest('#sentToggle')) return;
+  showAllSentences = !showAllSentences;
+  if (last.bow) renderMatrix(last.bow);
+  if (!showAllSentences) $('matrix').closest('.card').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+});
+
 function renderUnder(text, a) {
   const b = bagOfWords(text, a);
   last.bow = b;
@@ -303,13 +329,7 @@ function renderUnder(text, a) {
     ? 'TF-IDF needs at least 2 sentences: with only one, every word is in every "document", so IDF is 0.'
     : `N = ${b.N} sentences. DF = how many sentences contain the word. A word in every sentence gets IDF 0; rarer words score higher, so TF-IDF favours words that are frequent but concentrated in a few sentences.`;
 
-  const heat = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
-  $('matrix').innerHTML = b.matrix.length && b.cols.length
-    ? `<thead><tr><th>Sentence</th>${b.cols.map((w, k) => `<th><span class="mtag" style="background:${heat[k % heat.length]};transform:rotate(${k % 2 ? 3 : -3}deg)">${esc(w)}</span></th>`).join('')}</tr></thead><tbody>${b.matrix.map(r =>
-      `<tr><td class="sent" title="${esc(r.s)}"><span class="sbadge">S${r.i + 1}</span>${esc(clip(r.s, 30))}</td>${r.counts.map((c, k) =>
-        `<td><span class="cell${c ? ' on' : ''}" style="${c ? `background:${heat[k % heat.length]}` : ''}">${c}</span></td>`).join('')}</tr>`).join('')}</tbody>`
-      + (b.N > b.matrix.length ? `<tfoot><tr><td class="sent" colspan="${b.cols.length + 1}">Showing the first ${b.matrix.length} of ${b.N} sentences</td></tr></tfoot>` : '')
-    : '<tbody><tr><td class="empty">No words yet.</td></tr></tbody>';
+  renderMatrix(b);
 
   const pc = ['var(--mint)', 'var(--sky)', 'var(--yellow)'];
   $('sims').innerHTML = b.pairs.length

@@ -276,6 +276,8 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 .matrix td.sent { white-space: nowrap; }
 
 .tokens-card { margin: 0 0 24px; }
+.mfoot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; white-space: normal; }
+.matrix tfoot td.sent { max-width: none; overflow: visible; }
 .tokbtn { font: 700 14px Fredoka, sans-serif; padding: 3px 12px; min-height: 30px; border-radius: 8px; border: 2px solid var(--dark); background: var(--sky); color: var(--dark); cursor: pointer; box-shadow: 2px 2px 0 var(--line); }
 .tokbtn:active { transform: translate(2px, 2px); box-shadow: none; }
 .board.math .w small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
