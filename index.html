@@ -138,16 +138,6 @@
       <ol class="board math" id="board"></ol>
       <p class="note">Common words like “the”, “and” and “of” are skipped.</p>
     </article>
-
-    <article class="card span-6">
-      <h2>Nerd stats</h2>
-      <dl class="facts" id="facts"></dl>
-    </article>
-    <article class="card span-6">
-      <h2>Word pairs</h2>
-      <p class="sub">Two-word phrases used more than once</p>
-      <div class="pairs" id="pairs"></div>
-    </article>
   </section>
 
   <section class="under" aria-labelledby="underTitle">
@@ -157,15 +147,10 @@
   </section>
 
   <section class="grid">
-    <article class="card span-6">
+    <article class="card span-12">
       <div class="card-h"><h2>TF-IDF keywords</h2><span class="formula">TF × log₁₀(N ÷ DF)</span></div>
-      <ol class="board math" id="tfidfTable"></ol>
+      <ol class="board math two" id="tfidfTable"></ol>
       <p class="note" id="tfidfNote"></p>
-    </article>
-    <article class="card span-6">
-      <div class="card-h"><h2>Most similar sentences</h2><span class="formula">cosine similarity</span></div>
-      <div id="sims"></div>
-      <p class="note">cos = (A · B) ÷ (|A| × |B|), using each sentence's word counts.</p>
     </article>
 
     <article class="card span-12">
@@ -182,12 +167,11 @@
       <tbody>
         <tr><td>AI summary</td><td>Google Gemini 3.8 Flash via the Gemini API (falls back to other Flash models)</td><td>Summary, key points, tone, sentiment, language and topics</td></tr>
         <tr><td>PDF reading</td><td>PDF.js 3.11.174 by Mozilla</td><td>Pulls the text out of each PDF page in your browser</td></tr>
-        <tr><td>Word stats</td><td>Custom JavaScript</td><td>Counts, frequencies, word pairs, reading time</td></tr>
+        <tr><td>Word stats</td><td>Custom JavaScript</td><td>Counts, frequencies, reading time, stopwords, type-token ratio</td></tr>
         <tr><td>Readability</td><td>Flesch Reading Ease and Flesch–Kincaid formulas</td><td>Scores how hard the text is to read</td></tr>
         <tr><td>Quick pick</td><td>Luhn-style sentence scoring</td><td>Non-AI summary made of original sentences</td></tr>
         <tr><td>Stemming</td><td>Light suffix-stripping stemmer (custom JavaScript)</td><td>Counts different forms of a word (students, student) as one</td></tr>
         <tr><td>Bag of words &amp; TF-IDF</td><td>Custom JavaScript (TF, DF, IDF with log₁₀, TF-IDF)</td><td>Word importance, with each sentence as a mini-document</td></tr>
-        <tr><td>Sentence similarity</td><td>Cosine similarity on bag-of-words vectors</td><td>Finds the sentences that use the most similar words</td></tr>
         <tr><td>Hosting</td><td>GitHub Pages + GitHub Actions</td><td>Builds and publishes the site</td></tr>
       </tbody>
     </table>
@@ -195,7 +179,7 @@
   </details>
 
   <footer>
-    <span>TextLens v3.2 · Gemini by Google · PDF.js by Mozilla</span>
+    <span>TextLens v3.3 · Gemini by Google · PDF.js by Mozilla</span>
     <span class="foot-actions">
       <button class="linkbtn hide" id="ownKeyLink">Use my own Gemini key (optional)</button>
       <button class="btn small" id="copy">Copy results</button>
