@@ -6,7 +6,7 @@ import { summarize } from './gemini.js';
 let CFG = {};
 try { CFG = (await import('../config.js')).default || {}; } catch (e) { /* no built-in key */ }
 
-const VERSION = '3.3';
+const VERSION = '3.4';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
