@@ -275,6 +275,8 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 .sbadge { display: inline-grid; place-items: center; min-width: 30px; height: 26px; padding: 0 6px; margin-right: 8px; border-radius: 99px; border: 2px solid var(--dark); background: var(--yellow); color: var(--dark); font: 600 13px Fredoka, sans-serif; vertical-align: middle; }
 .matrix td.sent { white-space: nowrap; }
 
+.tokens-card { margin: 0 0 24px; }
+
 /* toast & confetti */
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 140%); background: var(--yellow); color: var(--dark); border: 3px solid var(--dark); box-shadow: 4px 4px 0 var(--dark); padding: 10px 20px; border-radius: 16px; font: 600 17px Fredoka, sans-serif; z-index: 60; transition: transform .3s cubic-bezier(.3, 1.6, .5, 1), opacity .2s, visibility .2s; pointer-events: none; opacity: 0; visibility: hidden; }
 .toast.on { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
