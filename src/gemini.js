@@ -46,7 +46,7 @@ function retryDelay(e) {
 const isQuota = e => e && (e.status === 429 || e.status === 500 || e.status === 503 || e.status === 408 || e.status === 0 ||
   /overloaded|UNAVAILABLE|RESOURCE_EXHAUSTED|try again later/i.test(e.message || ''));
 // Errors that mean "this key can't be used at all, try the next key".
-const isKeyProblem = e => e && (e.status === 401 || e.status === 403 ||
+const isKeyProblem = e => e && (e.status === 401 || e.status === 403 || /free tier is not available/i.test(e.message || '') ||
   /API key not valid|API_KEY_INVALID|API key expired|referer|referrer|PERMISSION_DENIED/i.test(e.message || ''));
 // Errors that mean "this model can't be used, try another one".
 const isModelProblem = e => e && (e.status === 404 ||
@@ -191,8 +191,9 @@ export async function summarize({ keys, usingBuiltInKey, preferredModel, text, l
         } catch (e) {
           note(p.n, model, e);
           if (isKeyProblem(e)) { keyErr = e; p.dead = true; continue; } // this key is unusable: skip it
-          if (e.status === 408) {
-            // A timeout means this model is slow for everyone: skip it on the other keys too.
+          if (e.status === 408 || e.status === 503 || e.status === 500 || /overloaded|high demand|UNAVAILABLE/i.test(e.message || '')) {
+            // A timeout or "high demand" means this model is busy for everyone, whatever the key:
+            // skip it on the other keys too and go straight to the next model.
             quotaErr = e;
             for (const q of plans) cooling.set(q.key + '|' + model, Date.now() + 60000);
             continue;
