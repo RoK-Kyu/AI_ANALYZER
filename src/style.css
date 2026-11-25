@@ -254,7 +254,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   .tokstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .card-h .formula { font-size: 12px; }
   .nt .opt, .nt .rank { display: none; }
-  .board.math li { grid-template-columns: 30px minmax(0, 7em) minmax(0, 1fr) 3.8em; }
+  .board.math > li { grid-template-columns: 30px minmax(0, 7em) minmax(0, 1fr) 3.8em; }
   .mini-tiles .tile .l { font-size: 13px; }
   .nt th, .nt td { padding: 8px 5px; }
   .matrix td.sent { max-width: 110px; }
@@ -281,6 +281,10 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 .tokbtn { font: 700 14px Fredoka, sans-serif; padding: 3px 12px; min-height: 30px; border-radius: 8px; border: 2px solid var(--dark); background: var(--sky); color: var(--dark); cursor: pointer; box-shadow: 2px 2px 0 var(--line); }
 .tokbtn:active { transform: translate(2px, 2px); box-shadow: none; }
 .board.math .w small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* full-width TF-IDF list: ranks 1-5 on the left, 6-10 on the right */
+.board.two { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(5, auto); grid-auto-flow: column; column-gap: 48px; }
+.board.two > li { min-width: 0; }
+@media (max-width: 760px) { .board.two { grid-template-columns: 1fr; grid-template-rows: none; grid-auto-flow: row; } }
 
 /* stemming switch */
 .hdr-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }

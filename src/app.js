@@ -6,7 +6,7 @@ import { summarize } from './gemini.js';
 let CFG = {};
 try { CFG = (await import('../config.js')).default || {}; } catch (e) { /* no built-in key */ }
 
-const VERSION = '3.2';
+const VERSION = '3.3';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -256,11 +256,6 @@ function renderLocal(a) {
     `<li data-w="${esc(w)}" tabindex="0" role="button"><span class="rank">${i + 1}</span><span class="w" title="${esc(w)}">${esc(w)}<small>${c} ÷ ${fmt(a.words)} = TF ${(c / a.words).toFixed(3)}</small></span><span class="t"><i style="width:${(c / top * 100).toFixed(1)}%;background:${barCols[i % barCols.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${c}</span></li>`).join('')
     : '<li class="empty">No words yet.</li>';
 
-  const facts = [['Paragraphs', fmt(a.paras)], ['Characters', fmt(a.chars)], ['Without spaces', fmt(a.charsNoSp)], ['Avg. word length', a.avgWord.toFixed(1) + ' letters'], ['Avg. sentence', a.avgSent.toFixed(1) + ' words'], ['Speaking time', mins(a.speakMin)], ['Longest word', a.longest[0] || '–']];
-  $('facts').innerHTML = facts.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
-
-  $('pairs').innerHTML = a.bigrams.length ? a.bigrams.map(([p, c]) => `<span>${esc(p)}<em>×${c}</em></span>`).join('') : '<p class="empty">No pair shows up twice yet.</p>';
-
   const len = document.querySelector('input[name=len]:checked').value;
   const ex = extractive(a, { short: 2, medium: 3, long: 5 }[len]);
   $('ext').innerHTML = ex.length ? '<p>' + ex.map(esc).join(' ') + '</p>' : '<p class="empty">Nothing yet.</p>';
@@ -335,13 +330,6 @@ function renderUnder(text, a) {
 
   renderMatrix(b);
 
-  const pc = ['var(--mint)', 'var(--sky)', 'var(--yellow)'];
-  $('sims').innerHTML = b.pairs.length
-    ? b.pairs.map((p, k) => `<div class="sim"><div class="sim-top"><span class="pct" style="background:${pc[k]}">${Math.round(p.sim * 100)}%</span><b>S${p.i + 1} ↔ S${p.j + 1}</b></div>
-        <p><b>S${p.i + 1}</b>${esc(clip(a.sentList[p.i], 120))}</p><p><b>S${p.j + 1}</b>${esc(clip(a.sentList[p.j], 120))}</p>
-        <div class="shared">${p.shared.slice(0, 8).map(w => `<span>${esc(w)}</span>`).join('')}</div></div>`).join('')
-      + (b.N > b.comparedSentences ? `<p class="note">Compared the first ${b.comparedSentences} sentences.</p>` : '')
-    : `<p class="empty">${b.N < 2 ? 'Add at least two sentences to compare.' : 'No two sentences share a content word yet.'}</p>`;
   refreshSpot();
 }
 
@@ -515,9 +503,8 @@ $('txt').addEventListener('input', () => { clearTimeout(tmr); tmr = setTimeout((
 $('copy').onclick = async () => {
   const a = last.a;
   if (!a) return;
-  const lines = ['TEXTLENS REPORT', `Stemming: ${stemOn ? 'on' : 'off'}`, `Words: ${a.words}`, `Unique words: ${a.unique}`, `Sentences: ${a.sents}`, `Paragraphs: ${a.paras}`,
-    `Characters: ${a.chars} (${a.charsNoSp} without spaces)`, `Average word length: ${a.avgWord.toFixed(1)} letters`,
-    `Average sentence length: ${a.avgSent.toFixed(1)} words`, `Reading time: ${mins(a.readMin)}`,
+  const lines = ['TEXTLENS REPORT', `Stemming: ${stemOn ? 'on' : 'off'}`, `Words: ${a.words}`, `Unique words: ${a.unique}`, `Sentences: ${a.sents}`,
+    `Reading time: ${mins(a.readMin)}`, `Stopwords removed: ${a.words - [...a.freq.values()].reduce((t, c) => t + c, 0)}`, `Type-token ratio: ${Math.round(a.diversity * 100)}%`,
     `Reading ease: ${Math.max(0, Math.min(100, a.fre)).toFixed(0)}/100 (${readLabel(a.fre)})`, '', 'Top words (count, TF):', ...a.top.map(([w, c], i) => `  ${i + 1}. ${w} (${c}, TF ${(c / a.words).toFixed(3)})`)];
   if (last.bow && last.bow.byTfidf.length) lines.push('', `TF-IDF keywords (each sentence = one document, N = ${last.bow.N}):`, ...last.bow.byTfidf.map((r, i) => `  ${i + 1}. ${r.w}  TF ${r.tf.toFixed(3)}  DF ${r.df}  IDF ${r.idf.toFixed(3)}  TF-IDF ${r.tfidf.toFixed(4)}`));
   if (last.ai) {

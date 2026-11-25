@@ -84,11 +84,6 @@ export function analyze(text, opts = {}) {
   const freq = new Map();
   content.forEach(w => { const n = norm(w); freq.set(n, (freq.get(n) || 0) + 1); });
   const ranked = [...freq].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-  const bi = new Map();
-  for (let i = 0; i < words.length - 1; i++) {
-    const a = words[i], b = words[i + 1];
-    if (isContent(a) && isContent(b)) { const k = norm(a) + ' ' + norm(b); bi.set(k, (bi.get(k) || 0) + 1); }
-  }
   const syl = words.reduce((s, w) => s + syllables(w), 0);
   const W = words.length || 1, S = sents.length || 1;
   return {
@@ -105,7 +100,6 @@ export function analyze(text, opts = {}) {
     diversity: words.length ? new Set(words).size / words.length : 0,
     top: ranked.slice(0, 10),
     cloud: ranked.slice(0, 24),
-    bigrams: [...bi].filter(x => x[1] > 1).sort((a, b) => b[1] - a[1]).slice(0, 8),
     fre: 206.835 - 1.015 * (W / S) - 84.6 * (syl / W),
     fk: 0.39 * (W / S) + 11.8 * (syl / W) - 15.59,
     longest: [...new Set(words)].sort((a, b) => b.length - a.length).slice(0, 4),
@@ -154,7 +148,7 @@ export function markWord(a, sentence, label) {
   return out;
 }
 
-// ---------- Bag of words, TF, IDF, TF-IDF and cosine similarity ----------
+// ---------- Bag of words, TF, IDF and TF-IDF ----------
 // With one document, each SENTENCE is treated as a mini-document, so IDF and
 // TF-IDF can be computed without needing several files.
 //
@@ -162,7 +156,6 @@ export function markWord(a, sentence, label) {
 //   DF(w)     = number of sentences that contain w
 //   IDF(w)    = log10( N / DF(w) ), N = number of sentences
 //   TF-IDF(w) = TF(w) * IDF(w)
-//   cosine(A, B) = (A · B) / (|A| * |B|)   on bag-of-words vectors of two sentences
 
 export function bagOfWords(text, a) {
   const all = tokens(text);
@@ -190,25 +183,9 @@ export function bagOfWords(text, a) {
     i, s: a.sentList[i], counts: cols.map(w => ts.filter(t => t === w).length),
   }));
 
-  // Cosine similarity between sentence bag-of-words vectors
-  const LIMIT = Math.min(N, 150);
-  const vecs = sentTokens.slice(0, LIMIT).map(ts => { const m = new Map(); ts.forEach(t => m.set(t, (m.get(t) || 0) + 1)); return m; });
-  const norms = vecs.map(v => Math.sqrt([...v.values()].reduce((s, x) => s + x * x, 0)));
-  const pairs = [];
-  for (let i = 0; i < LIMIT; i++) {
-    for (let j = i + 1; j < LIMIT; j++) {
-      if (!norms[i] || !norms[j]) continue;
-      let dot = 0;
-      const shared = [];
-      for (const [w, x] of vecs[i]) { const y = vecs[j].get(w); if (y) { dot += x * y; shared.push(w); } }
-      if (dot > 0) pairs.push({ i, j, sim: dot / (norms[i] * norms[j]), shared });
-    }
-  }
-  pairs.sort((p, q) => q.sim - p.sim);
-
   return {
     total, vocab: new Set(all).size, contentCount: content.length, removed: total - content.length,
     tokens: all.map(t => { const keep = isContent(t); return { t, keep, n: keep ? a.norm(t) : null, stem: keep && a.stem ? a.stemOf(t) : null }; }),
-    N, byTf, byTfidf, rowOf, sentTokens, cols, matrix, pairs: pairs.slice(0, 3), comparedSentences: LIMIT,
+    N, byTf, byTfidf, rowOf, sentTokens, cols, matrix,
   };
 }
