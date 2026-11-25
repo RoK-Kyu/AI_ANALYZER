@@ -138,6 +138,43 @@
     </article>
   </section>
 
+  <section class="under" aria-labelledby="underTitle">
+    <span class="sticker alt">No AI needed</span>
+    <h2 class="section-title" id="underTitle">Under the hood: bag of words &amp; TF-IDF</h2>
+    <p class="section-sub">How a computer “sees” your text. Each sentence counts as a mini-document, so these work with a single text. None of this uses a Gemini request.</p>
+  </section>
+
+  <section class="grid">
+    <article class="card span-12">
+      <div class="card-h"><h2>Tokens &amp; vocabulary</h2><span class="formula">bag of words</span></div>
+      <div class="tokstats" id="tokStats"></div>
+      <div class="toks" id="toks"></div>
+      <p class="note">The first tokens of your text. Faded ones are stopwords or numbers, which are removed before counting. A bag of words keeps only which words appear and how often, not their order.</p>
+    </article>
+
+    <article class="card span-6">
+      <div class="card-h"><h2>Term frequency (TF)</h2><span class="formula">TF = count ÷ total words</span></div>
+      <div class="scroll"><table class="nt" id="tfTable"></table></div>
+      <p class="note">How big a share of the whole text each word takes up.</p>
+    </article>
+    <article class="card span-6">
+      <div class="card-h"><h2>TF-IDF keywords</h2><span class="formula">TF × log₁₀(N ÷ DF)</span></div>
+      <div class="scroll"><table class="nt" id="tfidfTable"></table></div>
+      <p class="note" id="tfidfNote"></p>
+    </article>
+
+    <article class="card span-7">
+      <div class="card-h"><h2>Bag-of-words matrix</h2><span class="formula">document-term matrix</span></div>
+      <p class="sub">How many times each top word appears in each sentence</p>
+      <div class="scroll"><table class="nt matrix" id="matrix"></table></div>
+    </article>
+    <article class="card span-5">
+      <div class="card-h"><h2>Most similar sentences</h2><span class="formula">cosine similarity</span></div>
+      <div id="sims"></div>
+      <p class="note">cos = (A · B) ÷ (|A| × |B|), using each sentence's word counts.</p>
+    </article>
+  </section>
+
   <details class="card tools">
     <summary>Tools and AI models used</summary>
     <table>
@@ -148,6 +185,8 @@
         <tr><td>Word stats</td><td>Custom JavaScript</td><td>Counts, frequencies, word pairs, reading time</td></tr>
         <tr><td>Readability</td><td>Flesch Reading Ease and Flesch–Kincaid formulas</td><td>Scores how hard the text is to read</td></tr>
         <tr><td>Quick pick</td><td>Luhn-style sentence scoring</td><td>Non-AI summary made of original sentences</td></tr>
+        <tr><td>Bag of words &amp; TF-IDF</td><td>Custom JavaScript (TF, DF, IDF with log₁₀, TF-IDF)</td><td>Word importance, with each sentence as a mini-document</td></tr>
+        <tr><td>Sentence similarity</td><td>Cosine similarity on bag-of-words vectors</td><td>Finds the sentences that use the most similar words</td></tr>
         <tr><td>Hosting</td><td>GitHub Pages + GitHub Actions</td><td>Builds and publishes the site</td></tr>
       </tbody>
     </table>
@@ -155,7 +194,7 @@
   </details>
 
   <footer>
-    <span>TextLens v2.2 · Gemini by Google · PDF.js by Mozilla</span>
+    <span>TextLens v2.4 · Gemini by Google · PDF.js by Mozilla</span>
     <span class="foot-actions">
       <button class="linkbtn hide" id="ownKeyLink">Use my own Gemini key (optional)</button>
       <button class="btn small" id="copy">Copy results</button>
