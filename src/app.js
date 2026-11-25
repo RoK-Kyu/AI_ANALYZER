@@ -6,7 +6,7 @@ import { summarize } from './gemini.js';
 let CFG = {};
 try { CFG = (await import('../config.js')).default || {}; } catch (e) { /* no built-in key */ }
 
-const VERSION = '2.9';
+const VERSION = '3.0';
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const fmt = n => Number(n).toLocaleString('en-US');
@@ -253,7 +253,7 @@ function renderLocal(a) {
   const top = a.top[0] ? a.top[0][1] : 1;
   const barCols = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
   $('board').innerHTML = a.top.length ? a.top.map(([w, c], i) =>
-    `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(w)}">${esc(w)}</span><span class="t"><i style="width:${(c / top * 100).toFixed(1)}%;background:${barCols[i % barCols.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${c}</span></li>`).join('')
+    `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(w)}">${esc(w)}<small>${c} ÷ ${fmt(a.words)} = TF ${(c / a.words).toFixed(3)}</small></span><span class="t"><i style="width:${(c / top * 100).toFixed(1)}%;background:${barCols[i % barCols.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${c}</span></li>`).join('')
     : '<li class="empty">No words yet.</li>';
 
   const facts = [['Paragraphs', fmt(a.paras)], ['Characters', fmt(a.chars)], ['Without spaces', fmt(a.charsNoSp)], ['Avg. word length', a.avgWord.toFixed(1) + ' letters'], ['Avg. sentence', a.avgSent.toFixed(1) + ' words'], ['Speaking time', mins(a.speakMin)], ['Longest word', a.longest[0] || '–']];
@@ -270,20 +270,31 @@ function renderLocal(a) {
 /* ---------- under the hood: bag of words, TF, TF-IDF, similarity ---------- */
 const n3 = x => x.toFixed(3), n4 = x => x.toFixed(4);
 const clip = (t, n) => t.length > n ? t.slice(0, n - 1) + '…' : t;
+let showAllTokens = false;
+const TOKEN_PREVIEW = 48, TOKEN_MAX = 5000; // a cap keeps very long PDFs fast
+function renderTokens(b) {
+  if (!b.tokens.length) { $('toks').innerHTML = '<p class="empty">No tokens yet.</p>'; return; }
+  const list = showAllTokens ? b.tokens.slice(0, TOKEN_MAX) : b.tokens.slice(0, TOKEN_PREVIEW);
+  const chips = list.map(x => `<span class="tok${x.keep ? '' : ' out'}">${esc(x.t)}</span>`).join('');
+  let btn = '';
+  if (!showAllTokens && b.total > TOKEN_PREVIEW) btn = `<button class="tokbtn" id="tokToggle">+${fmt(b.total - TOKEN_PREVIEW)} more · show all</button>`;
+  else if (showAllTokens && b.total > TOKEN_PREVIEW) btn = (b.total > TOKEN_MAX ? `<span class="tok out" style="text-decoration:none">first ${fmt(TOKEN_MAX)} of ${fmt(b.total)} shown</span>` : '') + `<button class="tokbtn" id="tokToggle">Show fewer</button>`;
+  $('toks').innerHTML = chips + btn;
+}
+$('toks').addEventListener('click', e => {
+  if (!e.target.closest('#tokToggle')) return;
+  showAllTokens = !showAllTokens;
+  if (last.bow) renderTokens(last.bow);
+  if (!showAllTokens) $('toks').closest('.card').scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'nearest' });
+});
+
 function renderUnder(text, a) {
   const b = bagOfWords(text, a);
   last.bow = b;
   const fun = ['var(--yellow)', 'var(--pink)', 'var(--mint)', 'var(--sky)', 'var(--orange)', 'var(--lilac)'];
-  $('toks').innerHTML = b.preview.length
-    ? b.preview.map(x => `<span class="tok${x.keep ? '' : ' out'}">${esc(x.t)}</span>`).join('') + (b.total > b.preview.length ? `<span class="tok out" style="text-decoration:none">+${fmt(b.total - b.preview.length)} more</span>` : '')
-    : '<p class="empty">No tokens yet.</p>';
+  renderTokens(b);
 
-  // TF and TF-IDF as colourful leaderboards, with the maths under each word
-  const maxTf = b.byTf.length ? b.byTf[0].tf : 1;
-  $('tfTable').innerHTML = b.byTf.length
-    ? b.byTf.map((r, i) => `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(r.w)}">${esc(r.w)}<small>${r.c} ÷ ${fmt(b.total)}</small></span><span class="t"><i style="width:${(r.tf / maxTf * 100).toFixed(1)}%;background:${fun[i % fun.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${n3(r.tf)}</span></li>`).join('')
-    : '<li class="empty">No words yet.</li>';
-
+  // TF-IDF as a colourful leaderboard, with the maths under each word
   const maxTi = b.byTfidf.length && b.byTfidf[0].tfidf > 0 ? b.byTfidf[0].tfidf : 1;
   $('tfidfTable').innerHTML = b.byTfidf.length
     ? b.byTfidf.map((r, i) => `<li><span class="rank">${i + 1}</span><span class="w" title="${esc(r.w)}">${esc(r.w)}<small>DF ${r.df}/${b.N} · IDF ${n3(r.idf)}</small></span><span class="t"><i style="width:${(r.tfidf / maxTi * 100).toFixed(1)}%;background:${fun[(i + 3) % fun.length]};animation-delay:${i * 50}ms"></i></span><span class="c">${n4(r.tfidf)}</span></li>`).join('')
@@ -398,7 +409,7 @@ $('copy').onclick = async () => {
   const lines = ['TEXTLENS REPORT', `Words: ${a.words}`, `Unique words: ${a.unique}`, `Sentences: ${a.sents}`, `Paragraphs: ${a.paras}`,
     `Characters: ${a.chars} (${a.charsNoSp} without spaces)`, `Average word length: ${a.avgWord.toFixed(1)} letters`,
     `Average sentence length: ${a.avgSent.toFixed(1)} words`, `Reading time: ${mins(a.readMin)}`,
-    `Reading ease: ${Math.max(0, Math.min(100, a.fre)).toFixed(0)}/100 (${readLabel(a.fre)})`, '', 'Top words:', ...a.top.map(([w, c], i) => `  ${i + 1}. ${w} (${c})`)];
+    `Reading ease: ${Math.max(0, Math.min(100, a.fre)).toFixed(0)}/100 (${readLabel(a.fre)})`, '', 'Top words (count, TF):', ...a.top.map(([w, c], i) => `  ${i + 1}. ${w} (${c}, TF ${(c / a.words).toFixed(3)})`)];
   if (last.bow && last.bow.byTfidf.length) lines.push('', `TF-IDF keywords (each sentence = one document, N = ${last.bow.N}):`, ...last.bow.byTfidf.map((r, i) => `  ${i + 1}. ${r.w}  TF ${r.tf.toFixed(3)}  DF ${r.df}  IDF ${r.idf.toFixed(3)}  TF-IDF ${r.tfidf.toFixed(4)}`));
   if (last.ai) {
     lines.push('', `SUMMARY (Gemini ${last.ai.model || ''}):`, last.ai.summary || '');

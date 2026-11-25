@@ -100,7 +100,7 @@ export function bagOfWords(text, a) {
   const byTfidf = [...rows].sort((x, y) => y.tfidf - x.tfidf || y.c - x.c || x.w.localeCompare(y.w)).slice(0, 10);
 
   // Document-term matrix: first sentences x the most frequent words
-  const cols = byTf.slice(0, 5).map(r => r.w);
+  const cols = byTf.slice(0, 7).map(r => r.w);
   const matrix = sentTokens.slice(0, 8).map((ts, i) => ({
     i, s: a.sentList[i], counts: cols.map(w => ts.filter(t => t === w).length),
   }));
@@ -123,7 +123,7 @@ export function bagOfWords(text, a) {
 
   return {
     total, vocab: new Set(all).size, contentCount: content.length, removed: total - content.length,
-    preview: all.slice(0, 48).map(t => ({ t, keep: isContent(t) })),
+    tokens: all.map(t => ({ t, keep: isContent(t) })),
     N, byTf, byTfidf, cols, matrix, pairs: pairs.slice(0, 3), comparedSentences: LIMIT,
   };
 }
